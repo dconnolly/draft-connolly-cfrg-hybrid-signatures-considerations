@@ -14,17 +14,9 @@ Expires: 18 May 2025                                              Google
 
 Abstract
 
-   Working Groups SHOULD enable the use of ML-DSA signatures, as well as
-   SLH-DSA signatures and MAY enable the use of HashSLH-DSA signatures.
-
-   Working Groups SHOULD NOT include HashML-DSA as a signature option.
-
-   Working Groups SHOULD include non-hybrid options for signature
-   schemes in their protocols.
-
-   It is NOT RECOMMENDED to use hybrid signatures, except for rare
-   circumstances, and implementors MUST be warned to not reusing old key
-   material in a hybrid.
+   This document discusses how and when to use hybrid post-quantum/
+   traditional signatures, and when not to, including prehashing and key
+   use.
 
 About This Document
 
@@ -78,23 +70,26 @@ Table of Contents
 
    1.  Introduction
    2.  Conventions and Definitions
-   3.  Security Considerations
-     3.1.  Prehashing
-       3.1.1.  Security Considerations for ML-DSA
-       3.1.2.  Security Considerations for SLH-DSA
-     3.2.  Security Considerations for the use of Context
-     3.3.  Security Considerations for Hybrids
-       3.3.1.  The Downsides of Hybrid Signatures
-   4.  IANA Considerations
-   5.  References
-     5.1.  Normative References
-     5.2.  Informative References
+   3.  Specific Recommendations
+   4.  Security Considerations
+     4.1.  Prehashing
+     4.2.  Security Considerations for ML-DSA
+     4.3.  Security Considerations for SLH-DSA
+     4.4.  Security Considerations for the use of Context
+     4.5.  Security Considerations for Hybrids
+       4.5.1.  The Downsides of Hybrid Signatures
+   5.  IANA Considerations
+   6.  References
+     6.1.  Normative References
+     6.2.  Informative References
    Acknowledgments
    Authors' Addresses
 
 1.  Introduction
 
-   TODO Introduction
+   This document discusses how and when to use hybrid post-quantum/
+   traditional signatures, and when not to, including prehashing and key
+   use.
 
 2.  Conventions and Definitions
 
@@ -104,10 +99,23 @@ Table of Contents
    BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
-3.  Security Considerations
+3.  Specific Recommendations
 
+   Working Groups SHOULD enable the use of ML-DSA signatures, as well as
+   SLH-DSA signatures and MAY enable the use of HashSLH-DSA signatures.
 
-3.1.  Prehashing
+   Working Groups SHOULD NOT include HashML-DSA as a signature option.
+
+   Working Groups SHOULD include non-hybrid options for signature
+   schemes in their protocols.
+
+   It is NOT RECOMMENDED to use hybrid signatures, except for rare
+   circumstances, and implementors MUST be warned to not reusing old key
+   material in a hybrid.
+
+4.  Security Considerations
+
+4.1.  Prehashing
 
    Prehashing allow the computation of a signature on two entities: The
    Message Entity (ME) has access to the message and is not memory
@@ -119,15 +127,13 @@ Table of Contents
    In some designs, the signature is computed in a streaming manner,
    i.e. the ME first opens a stream to the SE, and then streams the
    entire message to the SE, but the SE never has to buffer the entire
-   message itself, and can operate on the message stream only.  (TODO: I
-   basically just pulled that out of a hat, we should look if there is
-   academic literature on it).
+   message itself, and can operate on the message stream only.
 
-3.1.1.  Security Considerations for ML-DSA
+4.2.  Security Considerations for ML-DSA
 
    ML-DSA allows for both streaming and prehashing messages.  For
-   prehashing, this uses the comment on [FIPS204] Algorithm 7 Line 6 and
-   computes the message representative mu in the ME as:
+   prehashing, this uses the comment on [FIPS204], Algorithm 7, Line 6,
+   and computes the message representative mu in the ME as:
 
    mu = SHAKE256(SHAKE256(pk, 64) || 0x00 || len(ctx) || ctx || m, 64)
 
@@ -141,19 +147,19 @@ Table of Contents
    variation defined in [FIPS204] is superfluous and SHOULD NOT be used
    to reduce interoperability difficulties.
 
-3.1.2.  Security Considerations for SLH-DSA
+4.3.  Security Considerations for SLH-DSA
 
-   SLH-DSA does not allow for prehashing or streaming messages.  The
-   HashSLH-DSA variant defined in [FIPS205] MAY be used to allow for
-   prehashing and streaming.  Alternatively, working groups can design
-   protocols in such a fashion that any message that has to be signed is
-   small enough to be transmitted over the network or be held in the
-   memory of a HSM.  If HashSLH-DSA is used, the hash function used for
-   the prehash MUST be part of the public key.  It is RECOMMENDED to use
-   the same hash function for the prehash as is used for the rest of
-   SLH-DSA, but the hash function MUST have collision resistance on par
-   with the security level.  (TODO maybe add a list instead of leaving
-   it like this)
+   SLH-DSA, standardized in [FIPS205], does not allow for prehashing or
+   streaming messages.  The HashSLH-DSA variant defined in [FIPS205] MAY
+   be used to allow for prehashing and streaming.  Alternatively,
+   working groups can design protocols in such a fashion that any
+   message that has to be signed is small enough to be transmitted over
+   the network or be held in the memory of a HSM.  If HashSLH-DSA is
+   used, the hash function used for the prehash MUST be part of the
+   public key.  It is RECOMMENDED to use the same hash function for the
+   prehash as is used for the rest of SLH-DSA, but the hash function
+   MUST have collision resistance on par with the security level.  (TODO
+   maybe add a list instead of leaving it like this)
 
    In order to increase interoperability, it is RECOMMENDED to reduce
    the overall number of variants, and only pick to support either SLH-
@@ -166,11 +172,11 @@ Table of Contents
    revoked or expired, SLH-DSA can be used to defend against the
    possibility of mathematical breakthroughs.
 
-3.2.  Security Considerations for the use of Context
+4.4.  Security Considerations for the use of Context
 
    TODO
 
-3.3.  Security Considerations for Hybrids
+4.5.  Security Considerations for Hybrids
 
    The main argument for using hybrid signatures is that they continue
    to be secure, even if one of the constituant schemes is broken.
@@ -191,11 +197,11 @@ Table of Contents
    then allow the migration to a new algorithm.
 
    The benefit of this approach is that it works both in a prequantum
-   and in a postquantum world, since it is agnostic of the type of
+   and in a post-quantum world, since it is agnostic of the type of
    breakage of the algorithm, so designing protocols in this fashion
    also makes them robust for the future.
 
-3.3.1.  The Downsides of Hybrid Signatures
+4.5.1.  The Downsides of Hybrid Signatures
 
    There are two main downsides of hybrid signatures.  Neither of them
    are unavoidable, but both require conscious effort to avoid.
@@ -221,20 +227,20 @@ Table of Contents
    with the various PQC schemes.  It is RECOMMENDED to avoid this as
    much as possible by selecting only very few possible combinations.
 
-4.  IANA Considerations
+5.  IANA Considerations
 
    This document has no IANA actions.
 
-5.  References
+6.  References
 
-5.1.  Normative References
+6.1.  Normative References
 
-   [FIPS.204] National Institute of Standards and Technology (NIST),
+   [FIPS204]  National Institute of Standards and Technology (NIST),
               "Module-Lattice-Based Digital Signature Standard", August
               2024, <https://nvlpubs.nist.gov/nistpubs/FIPS/
               NIST.FIPS.204.pdf>.
 
-   [FIPS.205] National Institute of Standards and Technology (NIST),
+   [FIPS205]  National Institute of Standards and Technology (NIST),
               "Stateless Hash-Based Digital Signature Standard", August
               2024, <https://nvlpubs.nist.gov/nistpubs/FIPS/
               NIST.FIPS.205.pdf>.
@@ -248,7 +254,7 @@ Table of Contents
               2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
               May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
 
-5.2.  Informative References
+6.2.  Informative References
 
    [HYBRIDSIG]
               Bindel, N., Herath, U., McKague, M., and D. Stebila,
