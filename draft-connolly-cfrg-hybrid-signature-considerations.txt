@@ -1,0 +1,301 @@
+
+
+
+
+Crypto Forum                                                 D. Connolly
+Internet-Draft                                                 SandboxAQ
+Intended status: Informational                                S. Schmieg
+Expires: 18 May 2025                                              Google
+                                                        14 November 2024
+
+
+                    Hybrid Signature Considerations
+       draft-connolly-cfrg-hybrid-signature-considerations-latest
+
+Abstract
+
+   Working Groups SHOULD enable the use of ML-DSA signatures, as well as
+   SLH-DSA signatures and MAY enable the use of HashSLH-DSA signatures.
+
+   Working Groups SHOULD NOT include HashML-DSA as a signature option.
+
+   Working Groups SHOULD include non-hybrid options for signature
+   schemes in their protocols.
+
+   It is NOT RECOMMENDED to use hybrid signatures, except for rare
+   circumstances, and implementors MUST be warned to not reusing old key
+   material in a hybrid.
+
+About This Document
+
+   This note is to be removed before publishing as an RFC.
+
+   The latest revision of this draft can be found at
+   https://dconnolly.github.io/draft-connolly-cfrg-hybrid-signature-
+   considerations/draft-connolly-cfrg-hybrid-signature-
+   considerations.html.  Status information for this document may be
+   found at https://datatracker.ietf.org/doc/draft-connolly-cfrg-hybrid-
+   signature-considerations/.
+
+   Discussion of this document takes place on the Crypto Forum Research
+   Group mailing list (mailto:cfrg@ietf.org), which is archived at
+   https://mailarchive.ietf.org/arch/browse/cfrg.  Subscribe at
+   https://www.ietf.org/mailman/listinfo/cfrg/.
+
+   Source for this draft and an issue tracker can be found at
+   https://github.com/dconnolly/draft-connolly-cfrg-hybrid-signature-
+   considerations.
+
+Status of This Memo
+
+   This Internet-Draft is submitted in full conformance with the
+   provisions of BCP 78 and BCP 79.
+
+   Internet-Drafts are working documents of the Internet Engineering
+   Task Force (IETF).  Note that other groups may also distribute
+   working documents as Internet-Drafts.  The list of current Internet-
+   Drafts is at https://datatracker.ietf.org/drafts/current/.
+
+   Internet-Drafts are draft documents valid for a maximum of six months
+   and may be updated, replaced, or obsoleted by other documents at any
+   time.  It is inappropriate to use Internet-Drafts as reference
+   material or to cite them other than as "work in progress."
+
+   This Internet-Draft will expire on 18 May 2025.
+
+Copyright Notice
+
+   Copyright (c) 2024 IETF Trust and the persons identified as the
+   document authors.  All rights reserved.
+
+   This document is subject to BCP 78 and the IETF Trust's Legal
+   Provisions Relating to IETF Documents (https://trustee.ietf.org/
+   license-info) in effect on the date of publication of this document.
+   Please review these documents carefully, as they describe your rights
+   and restrictions with respect to this document.
+
+Table of Contents
+
+   1.  Introduction
+   2.  Conventions and Definitions
+   3.  Security Considerations
+     3.1.  Prehashing
+       3.1.1.  Security Considerations for ML-DSA
+       3.1.2.  Security Considerations for SLH-DSA
+     3.2.  Security Considerations for the use of Context
+     3.3.  Security Considerations for Hybrids
+       3.3.1.  The Downsides of Hybrid Signatures
+   4.  IANA Considerations
+   5.  References
+     5.1.  Normative References
+     5.2.  Informative References
+   Acknowledgments
+   Authors' Addresses
+
+1.  Introduction
+
+   TODO Introduction
+
+2.  Conventions and Definitions
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+   "OPTIONAL" in this document are to be interpreted as described in
+   BCP 14 [RFC2119] [RFC8174] when, and only when, they appear in all
+   capitals, as shown here.
+
+3.  Security Considerations
+
+
+3.1.  Prehashing
+
+   Prehashing allow the computation of a signature on two entities: The
+   Message Entity (ME) has access to the message and is not memory
+   constrained, and a signing entity (SE) that has access to the private
+   key, but has limited memory and bandwidth.  Prehashing allows the
+   computation of a message representative by the ME, which is then
+   transfered to the SE to compute the signature.
+
+   In some designs, the signature is computed in a streaming manner,
+   i.e. the ME first opens a stream to the SE, and then streams the
+   entire message to the SE, but the SE never has to buffer the entire
+   message itself, and can operate on the message stream only.  (TODO: I
+   basically just pulled that out of a hat, we should look if there is
+   academic literature on it).
+
+3.1.1.  Security Considerations for ML-DSA
+
+   ML-DSA allows for both streaming and prehashing messages.  For
+   prehashing, this uses the comment on [FIPS204] Algorithm 7 Line 6 and
+   computes the message representative mu in the ME as:
+
+   mu = SHAKE256(SHAKE256(pk, 64) || 0x00 || len(ctx) || ctx || m, 64)
+
+   where pk is the public key, ctx is the context string and m is the
+   message.
+
+   For streaming, the SE can accumulate the message by updating the
+   SHAKE256 state, only having to keep track of the state.
+
+   Since ML-DSA can be both prehashed and streamed, the HashML-DSA
+   variation defined in [FIPS204] is superfluous and SHOULD NOT be used
+   to reduce interoperability difficulties.
+
+3.1.2.  Security Considerations for SLH-DSA
+
+   SLH-DSA does not allow for prehashing or streaming messages.  The
+   HashSLH-DSA variant defined in [FIPS205] MAY be used to allow for
+   prehashing and streaming.  Alternatively, working groups can design
+   protocols in such a fashion that any message that has to be signed is
+   small enough to be transmitted over the network or be held in the
+   memory of a HSM.  If HashSLH-DSA is used, the hash function used for
+   the prehash MUST be part of the public key.  It is RECOMMENDED to use
+   the same hash function for the prehash as is used for the rest of
+   SLH-DSA, but the hash function MUST have collision resistance on par
+   with the security level.  (TODO maybe add a list instead of leaving
+   it like this)
+
+   In order to increase interoperability, it is RECOMMENDED to reduce
+   the overall number of variants, and only pick to support either SLH-
+   DSA or HashSLH-DSA.
+
+   SLH-DSA is proven to be secure as long as the hash function used as
+   the parameter of SLH-DSA is secure.  Since any signature scheme is
+   only secure as long as the hash function used with the scheme is
+   secure, this means that in scenarios where public keys cannot be
+   revoked or expired, SLH-DSA can be used to defend against the
+   possibility of mathematical breakthroughs.
+
+3.2.  Security Considerations for the use of Context
+
+   TODO
+
+3.3.  Security Considerations for Hybrids
+
+   The main argument for using hybrid signatures is that they continue
+   to be secure, even if one of the constituant schemes is broken.
+   While this is a strong argument for encryption and KEMs, for
+   signatures continuing to be secure only matters if the public key
+   cannot be changed.  Forging a signature for a revoked public key is
+   not a security vulnerability.
+
+   Systems SHOULD be designed to be able to recover from compromise, so
+   they usually have mechanism to revoke public keys, or only use short
+   lived public keys, which limit the damage of a compromised key.
+   Breaking a signature scheme compromises all keys using this scheme,
+   but this break usually happens fairly publicly.  If the protocol has
+   the ability to switch to a new public key, this can be used to
+   mitigate the vulnerability posed by the broken scheme.  It is
+   RECOMMENDED for protocols to include the algorithm used in the public
+   key, and not hardcode it or dynamically negogiate it, which would
+   then allow the migration to a new algorithm.
+
+   The benefit of this approach is that it works both in a prequantum
+   and in a postquantum world, since it is agnostic of the type of
+   breakage of the algorithm, so designing protocols in this fashion
+   also makes them robust for the future.
+
+3.3.1.  The Downsides of Hybrid Signatures
+
+   There are two main downsides of hybrid signatures.  Neither of them
+   are unavoidable, but both require conscious effort to avoid.
+
+   First, hybrid signatures technically allow for the continued use of
+   the same key material.  However, if a key is used in both hybrid and
+   non-hybrid cases, this constitutes key reuse, and allows for
+   stripping the PQC key and reusing the signature as if it was
+   classical only.  The only way to avoid this problem is to introduce a
+   domain separator from a prefix-free set for both the classical and
+   the hybrid signature.  Introducing it only for the hybrid signature
+   is not sufficient, since it would leave the classical signature with
+   the empty string as domain separator, but the empty string is a
+   prefix of every string, making the set of domain separators not
+   prefix free.  If all clients can be updated to use the domain
+   separated classical signature, they can also be updated to use a new
+   public key instead, and using a new key is best practice, as it
+   completely sidesteps this problem.  Hence protocol designers MUST NOT
+   allow the reuse of old key material in a hybrid.
+
+   The other downside of hybrid signatures is the combinatorial
+   explosion that occurs when the various classical schemes are combined
+   with the various PQC schemes.  It is RECOMMENDED to avoid this as
+   much as possible by selecting only very few possible combinations.
+
+4.  IANA Considerations
+
+   This document has no IANA actions.
+
+5.  References
+
+5.1.  Normative References
+
+   [FIPS.204] National Institute of Standards and Technology (NIST),
+              "Module-Lattice-Based Digital Signature Standard", August
+              2024, <https://nvlpubs.nist.gov/nistpubs/FIPS/
+              NIST.FIPS.204.pdf>.
+
+   [FIPS.205] National Institute of Standards and Technology (NIST),
+              "Stateless Hash-Based Digital Signature Standard", August
+              2024, <https://nvlpubs.nist.gov/nistpubs/FIPS/
+              NIST.FIPS.205.pdf>.
+
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119,
+              DOI 10.17487/RFC2119, March 1997,
+              <https://www.rfc-editor.org/rfc/rfc2119>.
+
+   [RFC8174]  Leiba, B., "Ambiguity of Uppercase vs Lowercase in RFC
+              2119 Key Words", BCP 14, RFC 8174, DOI 10.17487/RFC8174,
+              May 2017, <https://www.rfc-editor.org/rfc/rfc8174>.
+
+5.2.  Informative References
+
+   [HYBRIDSIG]
+              Bindel, N., Herath, U., McKague, M., and D. Stebila,
+              "Transitioning to a Quantum-Resistant Public Key
+              Infrastructure", May 2017,
+              <https://eprint.iacr.org/2017/460>.
+
+   [HYBRIDSIGDESIGN]
+              Bindel, N. and B. Hale, "A Note on Hybrid Signature
+              Schemes", March 2023, <https://eprint.iacr.org/2023/423>.
+
+   [I-D.ietf-lamps-pq-composite-sigs]
+              Ounsworth, M., Gray, J., Pala, M., Klaußner, J., and S.
+              Fluhrer, "Composite ML-DSA For use in X.509 Public Key
+              Infrastructure and CMS", Work in Progress, Internet-Draft,
+              draft-ietf-lamps-pq-composite-sigs-03, 21 October 2024,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-lamps-
+              pq-composite-sigs-03>.
+
+   [I-D.ietf-pquip-pqt-hybrid-signature-spectrums]
+              "*** BROKEN REFERENCE ***".
+
+   [I-D.ietf-pquip-pqt-hybrid-terminology]
+              D, F., P, M., and B. Hale, "Terminology for Post-Quantum
+              Traditional Hybrid Schemes", Work in Progress, Internet-
+              Draft, draft-ietf-pquip-pqt-hybrid-terminology-04, 10
+              September 2024, <https://datatracker.ietf.org/doc/html/
+              draft-ietf-pquip-pqt-hybrid-terminology-04>.
+
+   [I-D.ietf-tls-hybrid-design]
+              Stebila, D., Fluhrer, S., and S. Gueron, "Hybrid key
+              exchange in TLS 1.3", Work in Progress, Internet-Draft,
+              draft-ietf-tls-hybrid-design-11, 7 October 2024,
+              <https://datatracker.ietf.org/doc/html/draft-ietf-tls-
+              hybrid-design-11>.
+
+Acknowledgments
+
+   TODO acknowledge.
+
+Authors' Addresses
+
+   Deirdre Connolly
+   SandboxAQ
+   Email: durumcrustulum@gmail.com
+
+
+   Sophie Schmieg
+   Google
+   Email: sschmieg@google.com
